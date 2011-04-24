@@ -7,7 +7,7 @@ import matplotlib.image as img
 import Image, ImageDraw as id
 
 max_depth = 60
-max_iteration = 12
+max_iteration = 60
 keep_running = 1
 iteration = 1
 #SAFE POINT TABLE 0-255
@@ -21,7 +21,7 @@ safe_point_lookup = [0, 2, 0, 2, 2, 0, 2, 2, 0, 2, #1
 					 0, 0, 0, 1, 0, 2, 0, 0, 0, 0, #8
 					 0, 0, 0, 0, 1, 0, 2, 0, 0, 0, #9
 					 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, #10
-					 0, 0, 0, 0, 2, 1, 2, 2, 0, 0, #11
+					 0, 0, 0, 0, 1, 1, 2, 2, 0, 0, #11
 					 0, 2, 1, 0, 0, 0, 1, 0, 0, 0, #12
 					 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, #13
 					 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, #14
@@ -39,7 +39,7 @@ safe_point_lookup = [0, 2, 0, 2, 2, 0, 2, 2, 0, 2, #1
 					 0, 0, 2, 2, 0, 0]
 
 def quad():
-	im = Image.open("square_rect.png")
+	im = Image.open("square1.png")
 	im = im.convert("1")
 	#buffer for printing out
 	im2 = im.copy()
@@ -272,41 +272,26 @@ class QuadNode:
 			ly = ly
 		pi = self.point_index(lx, ly)
 		
-		#top
-		#if(iteration%4==0):
-		if(1):
-			for j in range(lsx):
-				pi = self.point_index(lx+j, ly)
-				#print "TOP "+self.relative_location+" "+color(self.color)+" ("+str(lx+j)+","+str(ly)+") lsx:"+str(lsx)+" "+str(self.image.getpixel((lx+j, ly)))+" "+str(pi)
-				if(safe_point_lookup[pi]==1 or (safe_point_lookup[pi]==2 and self.further_check(pi, lx+j,ly)==1)):
-					self.image_buffer.putpixel((lx+j, ly), 255)
-			#elif(safe_point_lookup[pi]==2):
-				#self.image.putpixel((lx+j, ly), 255)
-				#should iterate the 5x5 pixel check here, using the (lx+j, ly+k) as the relative position
-				#print("safe_point_test(" + color(self.color) + "|" + str(self.px) + "," + str(self.py) + "|" + str(self.depth) + "|" + self.relative_location + "|"+ str(self.point_color(self.px, self.py)) + ")" )
-		#right
-		#elif(iteration%4==1):
-		if(1):
-			for k in range(lsy):
-				pi = self.point_index(lx+lsx-1, ly+k)
-				#print "RIGHT "+self.relative_location+" "+color(self.color)+" ("+str(lx)+","+str(ly+k)+") lsy:"+str(lsy)+" "+str(self.image.getpixel((lx, ly+k)))+" "+str(pi)
-				if(safe_point_lookup[pi]==1 or (safe_point_lookup[pi]==2 and self.further_check(pi, lx+lsx-1, ly+k)==1)):
-					self.image_buffer.putpixel((lx+lsx-1, ly+k), 255)
-		#bottom
-		#elif(iteration%4==2):
-		if(1):
-			for j in range(lsx):
-				pi = self.point_index(lx+j, ly+lsy-1)
-				if(safe_point_lookup[pi]==1 or (safe_point_lookup[pi]==2 and self.further_check(pi, lx+j, ly+lsy-1)==1)):
-					self.image_buffer.putpixel((lx+j, ly+lsy-1), 255)
-		#left
-		#elif(iteration%4==3):
-		if(1):
-			for k in range(lsy):
-				pi = self.point_index(lx, ly+k)
-				if(safe_point_lookup[pi]==1 or (safe_point_lookup[pi]==2 and self.further_check(pi, lx, ly+k)==1)):
-					self.image_buffer.putpixel((lx, ly+k), 255)
-					
+		#starting from top
+		for k in range(lsy):
+			pi = self.point_index(lx+lsx-1, ly+k)
+			#print "RIGHT "+self.relative_location+" "+color(self.color)+" ("+str(lx)+","+str(ly+k)+") lsy:"+str(lsy)+" "+str(self.image.getpixel((lx, ly+k)))+" "+str(pi)
+			if(safe_point_lookup[pi]==1 or (safe_point_lookup[pi]==2 and self.further_check(pi, lx+lsx-1, ly+k)==1)):
+				self.image_buffer.putpixel((lx+lsx-1, ly+k), 255)
+		for j in range(lsx):
+			pi = self.point_index(lx+j, ly+lsy-1)
+			if(safe_point_lookup[pi]==1 or (safe_point_lookup[pi]==2 and self.further_check(pi, lx+j, ly+lsy-1)==1)):
+				self.image_buffer.putpixel((lx+j, ly+lsy-1), 255)
+		for k in range(lsy):
+			pi = self.point_index(lx, ly+k)
+			if(safe_point_lookup[pi]==1 or (safe_point_lookup[pi]==2 and self.further_check(pi, lx, ly+k)==1)):
+				self.image_buffer.putpixel((lx, ly+k), 255)
+		for j in range(lsx):
+			pi = self.point_index(lx+j, ly)
+			#print "TOP "+self.relative_location+" "+color(self.color)+" ("+str(lx+j)+","+str(ly)+") lsx:"+str(lsx)+" "+str(self.image.getpixel((lx+j, ly)))+" "+str(pi)
+			if(safe_point_lookup[pi]==1 or (safe_point_lookup[pi]==2 and self.further_check(pi, lx+j,ly)==1)):
+				self.image_buffer.putpixel((lx+j, ly), 255)
+			
 	def further_check(self, index, dx,dy):
 		#calculate 5x5 lookup
 		tl = t1 = t2 = t3 = tr = -1
@@ -402,8 +387,9 @@ class QuadNode:
 			return 1
 		elif(index==248 or index==249 or index==252 or index==233 and b2==1):
 			return 1
-		elif(index==104 and l3==1 and bl==1 and b2==1):
-			return 1
+		#elif(index==104):
+		#	return 1
+		print "index:"+str(index)+" dx:"+str(dx)+" dy:"+str(dy);
 		return 0
 	def echo(self):
 		space = " "
