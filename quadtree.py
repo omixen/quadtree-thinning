@@ -7,23 +7,42 @@ import matplotlib.image as img
 import Image, ImageDraw as id
 
 max_depth = 60
-max_iteration = 5
+max_iteration = 12
 keep_running = 1
+iteration = 1
 #SAFE POINT TABLE 0-255
-safe_point_lookup = [0, 2, 0, 2, 2, 0, 2, 2, 0, 2, 0, 1, 0, 0, 2, 1, 0, 0, 0, 2, 2, 0, 1, 1, 0, 0, 0, 2, 0, 0, 2, 1,
-					 2, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-					 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-					 2, 0, 0, 0, 0, 0, 0, 0, 2, 1, 2, 2, 0, 0, 0, 2, 1, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0,
-					 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 2, 0, 2, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1,
-					 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
-					 2, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 2, 0, 1, 0, 1, 1, 2, 0, 0, 0, 0, 0, 0, 0,
-					 2, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 2, 0, 0, 0, 2, 1, 0, 0, 0, 1, 0, 1, 1, 2, 2, 0, 0, 2, 2, 0, 0]
+safe_point_lookup = [0, 2, 0, 2, 2, 0, 2, 2, 0, 2, #1
+					 0, 1, 0, 0, 2, 1, 0, 0, 0, 2, #2
+					 2, 0, 1, 1, 0, 0, 0, 2, 0, 0, #3
+					 2, 1, 2, 0, 0, 0, 0, 0, 0, 0, #4
+					 2, 2, 2, 1, 0, 0, 0, 1, 0, 0, #5
+					 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, #6
+					 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, #7
+					 0, 0, 0, 1, 0, 2, 0, 0, 0, 0, #8
+					 0, 0, 0, 0, 1, 0, 2, 0, 0, 0, #9
+					 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, #10
+					 0, 0, 0, 0, 2, 1, 2, 2, 0, 0, #11
+					 0, 2, 1, 0, 0, 0, 1, 0, 0, 0, #12
+					 2, 0, 0, 0, 0, 0, 0, 0, 2, 0, #13
+					 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, #14
+					 0, 0, 0, 0, 2, 0, 2, 0, 2, 0, #15
+					 1, 1, 0, 0, 0, 0, 0, 0, 0, 1, #16
+					 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, #17
+					 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, #18
+					 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, #19
+					 0, 1, 2, 0, 0, 0, 0, 0, 0, 0, #20
+					 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, #21
+					 2, 0, 1, 0, 1, 1, 2, 0, 0, 0, #22
+					 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, #23
+					 0, 0, 1, 1, 0, 2, 0, 0, 0, 2, #24
+					 1, 0, 0, 0, 1, 0, 1, 1, 2, 2, #25
+					 0, 0, 2, 2, 0, 0]
 
 def quad():
-	im = Image.open("black_top.png")
+	im = Image.open("square_rect.png")
 	im = im.convert("1")
 	#buffer for printing out
-	im2 = Image.new("1", im.size, 255)
+	im2 = im.copy()
 	#check image color
 	im_hist = im.histogram()
 	im_color = 1
@@ -34,28 +53,32 @@ def quad():
 	#build quad tree, still hardcoding the init to gray
 	
 	#if there is still point to be removed
-	iteration = 0
-	keep_running = 1
+	global iteration
+	global keep_running
 	while keep_running==1:
 		#(self, image, parent, color, depth, rel_loc, px, py, sx, sy)
-		root = QuadNode(im, None, im_color, 0, "", im.size[0]/2, im.size[1]/2, im.size[0]/2, im.size[1]/2)
+		root = QuadNode(im, im2,  None, im_color, 0, "", im.size[0]/2, im.size[1]/2, im.size[0]/2, im.size[1]/2)
 		root.build()
+		#if(iteration==0):
+		#	root.echo()
 		root.traverse(None,None,None,None) 
 		#safe_point_test is called within traverse
 		#if there's a pixel removal, safe_point_test will set keep_running = 1
 		#since it is not complete, an iteration limit is used
+		print "iteration: "+ str(iteration)
 		iteration = iteration + 1
 		if(iteration>max_iteration):
 			keep_running = 0
-	pp.imshow(im, origin="lower")
-	
+		im = im2.copy()
+	#pp.imshow(im, origin="lower")
+	im.save("new_square_rect.png")
 	#for testing, this will build the quadtree, echo the node and show an image created using the quadtree
-	root = QuadNode(im, None, im_color, 0, "", im.size[0]/2, im.size[1]/2, im.size[0]/2, im.size[1]/2)
-	root.build()
+	#root = QuadNode(im, None, im_color, 0, "", im.size[0]/2, im.size[1]/2, im.size[0]/2, im.size[1]/2)
+	#root.build()
 	#root.echo()
-	root.draw(im2)
-	pp.figure()
-	pp.imshow(im2, origin="lower")
+	#root.draw(im2)
+	#pp.figure()
+	#pp.imshow(im2, origin="lower")
 
 
 #create the node class
@@ -69,8 +92,9 @@ class QuadNode:
 	depth #determine the scale
 	"""
 	
-	def __init__(self, image, parent, color, depth, rel_loc, px, py, sx, sy):
+	def __init__(self, image, image2, parent, color, depth, rel_loc, px, py, sx, sy):
 		self.image = image
+		self.image_buffer = image2
 		self.parent = parent
 		self.color = color
 		self.depth = depth
@@ -114,7 +138,7 @@ class QuadNode:
 				nw_color = 2 #gray
 			elif(nw_hist[0]>0):
 				nw_color = 0 #black
-			self.nw = QuadNode(self.image, self, nw_color, c_depth, "nw", nw_px, nw_py, c_sx, c_sy)
+			self.nw = QuadNode(self.image, self.image_buffer, self, nw_color, c_depth, "nw", nw_px, nw_py, c_sx, c_sy)
 			if nw_color == 2:
 				self.nw.build()
 			#end of nw
@@ -131,7 +155,7 @@ class QuadNode:
 				ne_color = 2 #gray
 			elif(ne_hist[0]>0):
 				ne_color = 0 #black
-			self.ne = QuadNode(self.image, self, ne_color, c_depth, "ne", ne_px, ne_py, c_sx, c_sy)
+			self.ne = QuadNode(self.image, self.image_buffer, self, ne_color, c_depth, "ne", ne_px, ne_py, c_sx, c_sy)
 			if ne_color == 2:
 				self.ne.build()
 			#end of ne
@@ -148,7 +172,7 @@ class QuadNode:
 				sw_color = 2 #gray
 			elif(sw_hist[0]>0):
 				sw_color = 0 #black
-			self.sw = QuadNode(self.image, self, sw_color, c_depth, "sw", sw_px, sw_py, c_sx, c_sy)
+			self.sw = QuadNode(self.image, self.image_buffer, self, sw_color, c_depth, "sw", sw_px, sw_py, c_sx, c_sy)
 			if sw_color == 2:
 				self.sw.build()
 			#end of sw
@@ -165,7 +189,7 @@ class QuadNode:
 				se_color = 2 #gray
 			elif(se_hist[0]>0):
 				se_color = 0 #black
-			self.se = QuadNode(self.image, self, se_color, c_depth, "se", se_px, se_py, c_sx, c_sy)
+			self.se = QuadNode(self.image, self.image_buffer, self, se_color, c_depth, "se", se_px, se_py, c_sx, c_sy)
 			if se_color == 2: #if gray continue building
 				self.se.build()
 			#end of se
@@ -216,7 +240,7 @@ class QuadNode:
 			if(self.sw.color==2) or (self.sw.color==0 and (w==None or w.ebc!=0 or self.nw.sbc!=0 or self.se.wbc!=0 or s==None or s.nbc!=0)):
 				self.sw.traverse(w, self.nw, self.se, s)
 			#se
-			if(self.se.color==2) or (self.nw.color==0 and (self.sw.ebc!=0 or self.ne.sbc!=0 or e==None or e.wbc!=0 or s==none or s.nbc!=0)):
+			if(self.se.color==2) or (self.se.color==0 and (self.sw.ebc!=0 or self.ne.sbc!=0 or e==None or e.wbc!=0 or s==None or s.nbc!=0)):
 				self.se.traverse(self.sw, self.ne, e, s)
 		else:
 			self.safe_point_test()
@@ -229,6 +253,7 @@ class QuadNode:
 		#   if safe_point_index==1, set pixel color to white
 		#   if safe_point_index==2, iterate cases for further checking
 		global keep_running
+		global iteration
 		lx = self.parent.px
 		ly = self.parent.py
 		lsx = self.parent.sx
@@ -245,18 +270,141 @@ class QuadNode:
 		if(self.parent.se == self): 
 			lx = lx
 			ly = ly
-		#top
-		for j in range(lsx):
-			for k in range(lsy):
-				pi = self.point_index(lx+j, ly+k)
-				#print self.relative_location+" "+color(self.color)+" "+str(self.image.getpixel((lx+j, ly+k)))+" "+str(pi)
-				if(safe_point_lookup[pi]==1):
-					self.image.putpixel((lx+j, ly+k), 255)
-				elif(safe_point_lookup[pi]==2):
-					self.image.putpixel((lx+j, ly+k), 255)
-					#should iterate the 5x5 pixel check here, using the (lx+j, ly+k) as the relative position
-					#print("safe_point_test(" + color(self.color) + "|" + str(self.px) + "," + str(self.py) + "|" + str(self.depth) + "|" + self.relative_location + "|"+ str(self.point_color(self.px, self.py)) + ")" )
+		pi = self.point_index(lx, ly)
 		
+		#top
+		#if(iteration%4==0):
+		if(1):
+			for j in range(lsx):
+				pi = self.point_index(lx+j, ly)
+				#print "TOP "+self.relative_location+" "+color(self.color)+" ("+str(lx+j)+","+str(ly)+") lsx:"+str(lsx)+" "+str(self.image.getpixel((lx+j, ly)))+" "+str(pi)
+				if(safe_point_lookup[pi]==1 or (safe_point_lookup[pi]==2 and self.further_check(pi, lx+j,ly)==1)):
+					self.image_buffer.putpixel((lx+j, ly), 255)
+			#elif(safe_point_lookup[pi]==2):
+				#self.image.putpixel((lx+j, ly), 255)
+				#should iterate the 5x5 pixel check here, using the (lx+j, ly+k) as the relative position
+				#print("safe_point_test(" + color(self.color) + "|" + str(self.px) + "," + str(self.py) + "|" + str(self.depth) + "|" + self.relative_location + "|"+ str(self.point_color(self.px, self.py)) + ")" )
+		#right
+		#elif(iteration%4==1):
+		if(1):
+			for k in range(lsy):
+				pi = self.point_index(lx+lsx-1, ly+k)
+				#print "RIGHT "+self.relative_location+" "+color(self.color)+" ("+str(lx)+","+str(ly+k)+") lsy:"+str(lsy)+" "+str(self.image.getpixel((lx, ly+k)))+" "+str(pi)
+				if(safe_point_lookup[pi]==1 or (safe_point_lookup[pi]==2 and self.further_check(pi, lx+lsx-1, ly+k)==1)):
+					self.image_buffer.putpixel((lx+lsx-1, ly+k), 255)
+		#bottom
+		#elif(iteration%4==2):
+		if(1):
+			for j in range(lsx):
+				pi = self.point_index(lx+j, ly+lsy-1)
+				if(safe_point_lookup[pi]==1 or (safe_point_lookup[pi]==2 and self.further_check(pi, lx+j, ly+lsy-1)==1)):
+					self.image_buffer.putpixel((lx+j, ly+lsy-1), 255)
+		#left
+		#elif(iteration%4==3):
+		if(1):
+			for k in range(lsy):
+				pi = self.point_index(lx, ly+k)
+				if(safe_point_lookup[pi]==1 or (safe_point_lookup[pi]==2 and self.further_check(pi, lx, ly+k)==1)):
+					self.image_buffer.putpixel((lx, ly+k), 255)
+					
+	def further_check(self, index, dx,dy):
+		#calculate 5x5 lookup
+		tl = t1 = t2 = t3 = tr = -1
+		r1 = r2 = r3 = br = -1
+		l1 = l2 = l3 = bl = -1
+		b1 = b2 = b3 = -1
+		if(dx-2>0 and dy-2>0):
+			tl = safe_point_lookup[self.point_index(dx-2, dy-2)]
+		if(dx-2>0 and dy+2<self.image.size[1]):
+			bl = safe_point_lookup[self.point_index(dx-2, dy+2)]
+		if(dy-2>0 and dx+2<self.image.size[0]):
+			tr = safe_point_lookup[self.point_index(dx+2, dy-2)]
+		if(dx+2<self.image.size[0] and dy+2<self.image.size[1]):
+			br = safe_point_lookup[self.point_index(dx+2, dy+2)]
+		if(dy-2>0):
+			t2 = safe_point_lookup[self.point_index(dx, dy-2)]
+			if(dx-1>0):
+				t1 = safe_point_lookup[self.point_index(dx-1, dy-2)]
+			if(dx+1<self.image.size[0]):
+				t3 = safe_point_lookup[self.point_index(dx+1, dy-2)]
+		if(dx-2>0):
+			l2 = safe_point_lookup[self.point_index(dx-2, dy)]
+			if(dy-1>0):
+				l1 = safe_point_lookup[self.point_index(dx-2, dy-1)]
+			if(dy+1<self.image.size[1]):
+				l3 = safe_point_lookup[self.point_index(dx-2, dy+1)]
+		if(dx+2<self.image.size[0]):
+			r2 = safe_point_lookup[self.point_index(dx+2, dy)]
+			if(dy-1>0):
+				r1 = safe_point_lookup[self.point_index(dx+2, dy-1)]
+			if(dy+1<self.image.size[1]):
+				r3 = safe_point_lookup[self.point_index(dx+2, dy+1)]
+		if(dy+2<self.image.size[1]):
+			b2 = safe_point_lookup[self.point_index(dx, dy+2)]
+			if(dx-1>0):
+				b1 = safe_point_lookup[self.point_index(dx-1, dy+2)]
+			if(dx+1<self.image.size[1]):
+				b3 = safe_point_lookup[self.point_index(dx+1, dy+2)]
+		#start checking
+		if(index==1 and tl==1 and t1==1 and l1==1):
+			return 1
+		elif(index==32 and bl==1 and l3==1 and b1==1):
+			return 1
+		elif(index==128 and br==1 and r3==1 and b3==1):
+			return 1
+		elif(index==4 and tr==1 and t3==1 and r1==1):
+			return 1
+		elif(index==9 and l2==2 and l1==1 and t1==2):
+			return 1
+		elif(index==96 and l3==2 and b1==1 and b2==2):
+			return 1
+		elif(index==144 and b3==2 and r3==1 and r2==2):
+			return 1
+		elif(index==6 and t2==2 and t3==1 and r1==2):
+			return 1
+		elif(index==3 and l1==2 and t1==1 and t2==2):
+			return 1
+		elif(index==40 and l2==2 and l3==1 and b1==2):
+			return 1
+		elif(index==192 and b2==2 and b3==1 and r3==2):
+			return 1
+		elif(index==20 and t3==2 and r1==1 and r2==2):
+			return 1
+		elif(index==14 and t2==1):
+			return 1
+		elif(index==146 or index==19 and r2==1):
+			return 1
+		elif(index==42 or index==107 or index==111 or index==235 or index==239 and l2==1):
+			return 1
+		elif(index==7 and t1==2 and t2==1 and t3==2):
+			return 1
+		elif(index==41 and l1==2 and l2==1 and l3==2):
+			return 1
+		elif(index==220 and b1==2 and b2==1 and b3==2):
+			return 1
+		elif(index==148 and r1==2 and r2==1 and r3==2):
+			return 1
+		elif(index==27 and t1==1 and l1==1 and r1==0 and r2==0 and r3==0):
+			return 1
+		elif(index==106 and l3==1 and b1==1 and t1==0 and t2==0 and t3==0):
+			return 1
+		elif(index==216 and r3==1 and b3==1 and l1==0 and l2==0 and l3==0):
+			return 1
+		elif(index==86 and t3==1 and r1==1 and b1==0 and b2==0 and b3==0):
+			return 1
+		elif(index==30 and t3==1 and r1==1 and l1==0 and l2==0 and l3==0):
+			return 1
+		elif(index==75 and t1==1 and l1==1 and b1==0 and b2==0 and b3==0):
+			return 1
+		elif(index==120 and l3==1 and b1==1 and r1==0 and r2==0 and r3==0):
+			return 1
+		elif(index==210 and r3==1 and b3==3 and t1==0 and t2==0 and t3==0):
+			return 1
+		elif(index==248 or index==249 or index==252 or index==233 and b2==1):
+			return 1
+		elif(index==104 and l3==1 and bl==1 and b2==1):
+			return 1
+		return 0
 	def echo(self):
 		space = " "
 		for j in range(self.depth):
