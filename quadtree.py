@@ -4,7 +4,7 @@ import pylab as pl
 import matplotlib.cm as cm
 import matplotlib.pyplot as pp
 import matplotlib.image as img
-import Image, ImageDraw as id
+import Image
 
 max_depth = 60
 max_iteration = 60
@@ -62,8 +62,11 @@ def quad(image_file):
 		if(iteration>max_iteration or changed==0):
 			keep_running = 0
 		im = im2.copy()
+	idx = 0
 	#pp.imshow(im, origin="lower")
-	im.save("result_"+image_file)
+	while(os.path.exists("result"+str(idx)+"_"+image_file)):
+		idx = idx + 1
+	im.save("result"+str(idx)+"_"+image_file)
 	
 	#for testing, this will build the quadtree, echo the node and show an image created using the quadtree
 	#root = QuadNode(im, None, im_color, 0, "", im.size[0]/2, im.size[1]/2, im.size[0]/2, im.size[1]/2)
@@ -222,6 +225,7 @@ class QuadNode:
 			self.nbc = self.color
 		
 	def traverse(self, w, n, e, s):
+		global iteration
 		changed = 0
 		if(self.nw!=None and self.ne!=None and self.sw!=None and self.se!=None):
 			#nw
@@ -237,6 +241,8 @@ class QuadNode:
 			if(self.se.color==2) or (self.se.color==0 and (self.sw.ebc!=0 or self.ne.sbc!=0 or e==None or e.wbc!=0 or s==None or s.nbc!=0)):
 				changed += self.se.traverse(self.sw, self.ne, e, s)
 		else:
+			#if(iteration<2):
+			#	changed += self.fill_point_test()
 			changed += self.safe_point_test()
 		return changed
 		
@@ -390,6 +396,127 @@ class QuadNode:
 		elif(index==104 and l1==0 and bl==0 and b1==0):
 			return 1
 		#print "index:"+str(index)+" dx:"+str(dx)+" dy:"+str(dy);
+		return 0
+	def fill_point_test(self):
+		changed = 0
+		#get the index
+		lx = self.parent.px
+		ly = self.parent.py
+		lsx = self.parent.sx
+		lsy = self.parent.sy
+		if(self.parent.nw == self): 
+			lx = lx-lsx
+			ly = ly-lsy
+		if(self.parent.ne == self): 
+			lx = lx
+			ly = ly-lsy
+		if(self.parent.sw == self): 
+			lx = lx-lsx
+			ly = ly
+		if(self.parent.se == self): 
+			lx = lx
+			ly = ly
+		if(lx+lsx<self.image.size[0]):
+			for k in range(lsy):
+				pi = self.point_index(lx+lsx, ly+k)
+				#print "RIGHT "+self.relative_location+" "+color(self.color)+" ("+str(lx)+","+str(ly+k)+") lsy:"+str(lsy)+" "+str(self.image.getpixel((lx, ly+k)))+" "+str(pi)
+				if(self.image.getpixel((lx+lsx, ly+k))!=0 and self.check_filling_point(pi, lx+lsx, ly+k)==1
+					and (safe_point_lookup[pi]==0 or (safe_point_lookup[pi]==2 and self.further_check(pi, lx+lsx, ly+k)==0))):
+					self.image_buffer.putpixel((lx+lsx, ly+k), 0)
+					changed = 1
+		if(ly+lsy<self.image.size[1]):
+			for j in range(lsx):
+				pi = self.point_index(lx+j, ly+lsy)
+				if(self.image.getpixel((lx+j, ly+lsy))!=0 and self.check_filling_point(pi, lx+j, ly+lsy)==1
+					and (safe_point_lookup[pi]==0 or (safe_point_lookup[pi]==2 and self.further_check(pi, lx+j, ly+lsy)==0))):
+					self.image_buffer.putpixel((lx+j, ly+lsy), 0)
+					changed = 1
+		if(lx-1>=0):
+			for k in range(lsy):
+				pi = self.point_index(lx-1, ly+k)
+				if(self.image.getpixel((lx-1, ly+k))!=0 and self.check_filling_point(pi, lx-1, ly+k)==1
+					and (safe_point_lookup[pi]==0 or (safe_point_lookup[pi]==2 and self.further_check(pi, lx-1, ly+k)==0))):
+					self.image_buffer.putpixel((lx-1, ly+k), 0)
+					changed = 1
+		if(ly-1>=0):
+			for j in range(lsx):
+				pi = self.point_index(lx+j, ly-1)
+				#print "TOP "+self.relative_location+" "+color(self.color)+" ("+str(lx+j)+","+str(ly)+") lsx:"+str(lsx)+" "+str(self.image.getpixel((lx+j, ly)))+" "+str(pi)
+				if(self.image.getpixel((lx+j, ly-1))!=0 and self.check_filling_point(pi, lx+j, ly-1)==1
+					and (safe_point_lookup[pi]==0 or (safe_point_lookup[pi]==2 and self.further_check(pi, lx+j, ly-1)==0))):
+					self.image_buffer.putpixel((lx+j, ly-1), 0)
+					changed = 1
+		return changed
+	def check_filling_point(self, idx, dx, dy):
+				#calculate 5x5 lookup
+		tl = t1 = t2 = t3 = tr = -1
+		r1 = r2 = r3 = br = -1
+		l1 = l2 = l3 = bl = -1
+		b1 = b2 = b3 = -1
+		if(dx-2>=0 and dy-2>=0):
+			tl = self.point_color(dx-2, dy-2) 
+		if(dx-2>=0 and dy+2<self.image.size[1]):
+			bl = self.point_color(dx-2, dy+2) 
+		if(dy-2>=0 and dx+2<self.image.size[0]):
+			tr = self.point_color(dx+2, dy-2) 
+		if(dx+2<self.image.size[0] and dy+2<self.image.size[1]):
+			br = self.point_color(dx+2, dy+2) 
+		if(dy-2>=0):
+			t2 = self.point_color(dx, dy-2) 
+			if(dx-1>=0):
+				t1 = self.point_color(dx-1, dy-2) 
+			if(dx+1<self.image.size[0]):
+				t3 = self.point_color(dx+1, dy-2) 
+		if(dx-2>=0):
+			l2 = self.point_color(dx-2, dy) 
+			if(dy-1>=0):
+				l1 = self.point_color(dx-2, dy-1) 
+			if(dy+1<self.image.size[1]):
+				l3 = self.point_color(dx-2, dy-1) 
+		if(dx+2<self.image.size[0]):
+			r2 = self.point_color(dx+2, dy) 
+			if(dy-1>=0):
+				r1 = self.point_color(dx+2, dy-1) 
+			if(dy+1<self.image.size[1]):
+				r3 = self.point_color(dx+2, dy+1) 
+		if(dy+2<self.image.size[1]):
+			b2 = self.point_color(dx, dy+2) 
+			if(dx-1>=0):
+				b1 = self.point_color(dx-1, dy+2) 
+			if(dx+1<self.image.size[1]):
+				b3 = self.point_color(dx+1, dy+2)
+		if(idx==15 and l3!=0):
+			return 1
+		if(idx==105 and b3!=0):
+			return 1
+		if(idx==240 and r1!=0):
+			return 1
+		if(idx==150 and t1!=0):
+			return 1
+		if(idx==23 and r3!=0):
+			return 1
+		if(idx==43 and t3!=0):
+			return 1
+		if(idx==232 and l1!=0):
+			return 1
+		if(idx==212 and b1!=0):
+			return 1
+		if(idx==47 and l2!=0 and b2!=0):
+			return 1
+		if(idx==233 and t2!=0 and r2!=0):
+			return 1
+		if(idx==244 and t2!=0 and l2!=0):
+			return 1
+		if(idx==31 or idx==107 or idx==248 or idx==214):
+			return 1
+		if((idx==111 or idx==235 or idx==239) and r2!=0):
+			return 1
+		if((idx==249 or idx==252 or idx==253) and t2!=0):
+			return 1
+		if((idx==246 or idx==215 or idx==247) and l2!=0):
+			return 1
+		if((idx==159 or idx==63 or idx==191) and b2!=0):
+			return 1
 		return 0
 	def echo(self):
 		space = " "
